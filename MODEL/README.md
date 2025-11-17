@@ -2,6 +2,9 @@ S2S_Translation
 
 This repository contains a small sequence-to-sequence (S2S) translation project, originally imported from a local workspace.
 
+
+
+
 Project Contents
 
 interface.html — simple HTML interface for the translator
@@ -11,6 +14,8 @@ translator.html — additional UI layout for translation
 main2.py — main Python script to run the translator
 
 model2.py — model definitions and helper functions
+
+
 
 
 
