@@ -1,6 +1,6 @@
 S2S_Translation
 
-This repository contains a small sequence-to-sequence (S2S) translation project, originally imported from a local workspace.
+This repository contains a speech to speech (S2S) translation project
 
 
 
