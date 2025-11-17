@@ -1,0 +1,13 @@
+# Requirements generated from scanned imports in repository
+torch
+numpy
+sounddevice
+pygame
+transformers
+gTTS
+librosa
+fastapi
+uvicorn
+
+# Optional (install if needed):
+# sentencepiece  # required by some tokenizers/models

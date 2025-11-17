@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low Latency Translator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .section-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.5rem;
+        }
+
+        .file-upload-card {
+            padding: 1.5rem;
+            border: 2px dashed #dee2e6;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-card:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-connected { 
+            background-color: #28a745; 
+        }
+        .status-disconnected { 
+            background-color: #dc3545; 
+        }
+        .status-recording { 
+            background-color: #dc3545; 
+            animation: pulse 1.5s infinite;
+        }
+        .status-processing {
+            background-color: #ffc107;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .action-btn {
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .current-languages {
+            font-size: 1.1rem;
+            color: #495057;
+        }
+
+        .transcription-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-height: 120px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .transcription-box.translated {
+            background: #e8f5e8;
+            border-color: #28a745;
+        }
+
+        .placeholder-text {
+            color: #6c757d;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .section-title {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .transcription-info {
+            margin-top: 0.5rem;
+        }
+
+        /* Audio Visualization */
+        .recording-visual {
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .audio-bars {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 40px;
+            gap: 3px;
+        }
+
+        .audio-bars .bar {
+            width: 4px;
+            background: #007bff;
+            border-radius: 2px;
+            animation: audioBar 1.5s ease-in-out infinite;
+        }
+
+        .audio-bars .bar:nth-child(1) { animation-delay: 0.1s; height: 10px; }
+        .audio-bars .bar:nth-child(2) { animation-delay: 0.2s; height: 20px; }
+        .audio-bars .bar:nth-child(3) { animation-delay: 0.3s; height: 30px; }
+        .audio-bars .bar:nth-child(4) { animation-delay: 0.4s; height: 20px; }
+        .audio-bars .bar:nth-child(5) { animation-delay: 0.5s; height: 10px; }
+
+        @keyframes audioBar {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.3); }
+        }
+
+        .recording .audio-bars .bar {
+            background: #dc3545;
+        }
+
+        /* History Items */
+        .history-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .history-original {
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+
+        .history-translated {
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            z-index: 9999;
+        }
+
+        .file-info {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .display-4 {
+                font-size: 2rem;
+            }
+            
+            .action-btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Header -->
+                <div class="card header-card">
+                    <div class="card-body text-center">
+                        <h1 class="display-4 mb-3"><i class="fas fa-language me-3"></i>Low Latency Translator</h1>
+                        <p class="lead">Real-time speech-to-text translation with multilingual support</p>
+                    </div>
+                </div>
+
+                <!-- Status and Controls -->
+                <div class="card main-card">
+                    <div class="card-body">
+                        <!-- Status Bar -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="status-indicator status-disconnected" id="statusIndicator"></span>
+                                    <span id="statusText" class="text-muted">Disconnected</span>
+                                </div>
+                                <div class="current-languages" id="currentLanguages">
+                                    <strong>English</strong> <i class="fas fa-arrow-right mx-2"></i> <strong>Hindi</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <button class="btn btn-outline-primary" onclick="openLanguageModal()">
+                                    <i class="fas fa-cog me-2"></i>Change Languages
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Live Translation Section -->
+                        <div class="card section-card mb-4">
+                            <div class="card-header">
+                                <h4 class="mb-0"><i class="fas fa-microphone me-2"></i>Live Translation</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <p class="mb-3">Click start to begin real-time speech translation. Speak clearly into your microphone.</p>
+                                        <div class="recording-visual">
+                                            <div class="audio-bars" id="audioBars">
+                                                <div class="bar"></div>
+                                                <div class="bar"></div>
+                                                <div class="bar"></div>
+                                                <div class="bar"></div>
+                                                <div class="bar"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <button id="startBtn" class="btn btn-success btn-lg action-btn" onclick="toggleRecording()">
+                                            <i class="fas fa-microphone me-2"></i>Start Live Translation
+                                        </button>
+                                        <button id="stopBtn" class="btn btn-danger btn-lg action-btn" onclick="toggleRecording()" style="display: none;">
+                                            <i class="fas fa-stop me-2"></i>Stop Translation
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Translation Section -->
+                        <div class="card section-card mb-4">
+                            <div class="card-header">
+                                <h4 class="mb-0"><i class="fas fa-file me-2"></i>File Translation</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Audio File Upload -->
+                                    <div class="col-md-6 mb-3">
+                                        <div class="file-upload-card">
+                                            <div class="text-center mb-3">
+                                                <i class="fas fa-file-audio fa-3x text-primary"></i>
+                                            </div>
+                                            <h5 class="text-center">Audio File</h5>
+                                            <p class="text-muted text-center small">Upload WAV, MP3, or other audio files</p>
+                                            <input type="file" id="audioFile" accept="audio/*" class="form-control mb-3">
+                                            <div class="file-info" id="audioFileInfo"></div>
+                                            <button class="btn btn-primary w-100" onclick="processAudioFile()" id="audioBtn">
+                                                <i class="fas fa-translate me-2"></i>Translate Audio
+                                            </button>
+                                            <div class="progress mt-2" style="display: none;" id="audioProgress">
+                                                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Video File Upload -->
+                                    <div class="col-md-6 mb-3">
+                                        <div class="file-upload-card">
+                                            <div class="text-center mb-3">
+                                                <i class="fas fa-file-video fa-3x text-success"></i>
+                                            </div>
+                                            <h5 class="text-center">Video File</h5>
+                                            <p class="text-muted text-center small">Upload MP4, AVI, or other video files</p>
+                                            <input type="file" id="videoFile" accept="video/*" class="form-control mb-3">
+                                            <div class="file-info" id="videoFileInfo"></div>
+                                            <button class="btn btn-success w-100" onclick="processVideoFile()" id="videoBtn">
+                                                <i class="fas fa-translate me-2"></i>Translate Video
+                                            </button>
+                                            <div class="progress mt-2" style="display: none;" id="videoProgress">
+                                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 100%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results Section -->
+                        <div class="card section-card">
+                            <div class="card-header">
+                                <h4 class="mb-0"><i class="fas fa-results me-2"></i>Translation Results</h4>
+                            </div>
+                            <div class="card-body">
+                                <!-- Original Speech Recognition -->
+                                <div class="mb-4">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-comment-dots me-2"></i>Original Speech (ASR Output)
+                                    </h5>
+                                    <div class="transcription-box" id="originalText">
+                                        <div class="placeholder-text">
+                                            <i class="fas fa-headphones me-2"></i>
+                                            Your speech will be transcribed here...
+                                        </div>
+                                    </div>
+                                    <div class="transcription-info">
+                                        <small class="text-muted" id="originalInfo">Waiting for input...</small>
+                                    </div>
+                                </div>
+
+                                <!-- Translated Text -->
+                                <div class="mb-3">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-language me-2"></i>Translated Text
+                                    </h5>
+                                    <div class="transcription-box translated" id="translatedText">
+                                        <div class="placeholder-text">
+                                            <i class="fas fa-translate me-2"></i>
+                                            Translation will appear here...
+                                        </div>
+                                    </div>
+                                    <div class="transcription-info">
+                                        <small class="text-muted" id="translatedInfo">Waiting for translation...</small>
+                                    </div>
+                                </div>
+
+                                <!-- Translation History -->
+                                <div class="mt-4" id="historySection" style="display: none;">
+                                    <h6 class="section-title">Recent Translations</h6>
+                                    <div class="history-list" id="translationHistory"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Modal -->
+    <div class="modal fade" id="languageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Change Languages</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><strong>Source Language:</strong></label>
+                            <select id="sourceLang" class="form-select">
+                                <option value="english">English</option>
+                                <option value="hindi">Hindi</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><strong>Target Language:</strong></label>
+                            <select id="targetLang" class="form-select">
+                                <option value="hindi">Hindi</option>
+                                <option value="english">English</option>
+                                <option value="bengali">Bengali</option>
+                                <option value="tamil">Tamil</option>
+                                <option value="telugu">Telugu</option>
+                                <option value="marathi">Marathi</option>
+                                <option value="gujarati">Gujarati</option>
+                                <option value="kannada">Kannada</option>
+                                <option value="malayalam">Malayalam</option>
+                                <option value="punjabi">Punjabi</option>
+                                <option value="odia">Odia</option>
+                                <option value="assamese">Assamese</option>
+                                <option value="urdu">Urdu</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveLanguages()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class TranslatorApp {
+            constructor() {
+                this.ws = null;
+                this.isRecording = false;
+                this.translationHistory = [];
+                this.maxHistoryItems = 10;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                
+                this.initializeApp();
+            }
+
+            initializeApp() {
+                this.connectWebSocket();
+                this.loadLanguageSettings();
+                this.setupEventListeners();
+            }
+
+            connectWebSocket() {
+                try {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}/ws`;
+                    
+                    console.log('Connecting to WebSocket:', wsUrl);
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        console.log('✅ WebSocket connected successfully');
+                        this.updateStatus('Connected', 'status-connected');
+                        this.reconnectAttempts = 0;
+                        this.showNotification('Connected to translation server', 'success');
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleWebSocketMessage(data);
+                    };
+                    
+                    this.ws.onclose = () => {
+                        console.log('❌ WebSocket disconnected');
+                        this.updateStatus('Disconnected', 'status-disconnected');
+                        this.stopRecordingUI();
+                        
+                        // Attempt reconnect
+                        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                            this.reconnectAttempts++;
+                            console.log(`Reconnecting... attempt ${this.reconnectAttempts}`);
+                            setTimeout(() => this.connectWebSocket(), 2000);
+                        } else {
+                            this.showNotification('Failed to connect to server. Please refresh the page.', 'error');
+                        }
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.updateStatus('Connection Error', 'status-disconnected');
+                    };
+                } catch (error) {
+                    console.error('Failed to connect WebSocket:', error);
+                    this.showNotification('WebSocket connection failed', 'error');
+                }
+            }
+
+            handleWebSocketMessage(data) {
+                console.log('WebSocket message:', data);
+                switch(data.type) {
+                    case 'connected':
+                        this.showNotification('Connected to server successfully', 'success');
+                        break;
+                    case 'session_started':
+                        this.updateStatus('Live Translation Active', 'status-recording');
+                        this.showNotification('Live translation started! Speak now.', 'success');
+                        this.updateRecordingUI(true);
+                        break;
+                    case 'session_stopped':
+                        this.updateStatus('Connected', 'status-connected');
+                        this.showNotification('Live translation stopped.', 'info');
+                        this.stopRecordingUI();
+                        break;
+                    case 'transcription_update':
+                        this.updateTranscription(data.transcription, data.translated);
+                        break;
+                    case 'error':
+                        this.showNotification(data.message, 'error');
+                        break;
+                }
+            }
+
+            updateStatus(text, statusClass) {
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                statusIndicator.className = `status-indicator ${statusClass}`;
+                statusText.textContent = text;
+            }
+
+            updateTranscription(original, translated) {
+                const originalElement = document.getElementById('originalText');
+                const translatedElement = document.getElementById('translatedText');
+                const originalInfo = document.getElementById('originalInfo');
+                const translatedInfo = document.getElementById('translatedInfo');
+                
+                // Update original transcription
+                if (original && original.trim()) {
+                    originalElement.innerHTML = `<div class="original-text">${original}</div>`;
+                    originalInfo.textContent = `Detected speech (${new Date().toLocaleTimeString()})`;
+                }
+                
+                // Update translated text
+                if (translated && translated.trim()) {
+                    translatedElement.innerHTML = `<div class="translated-text">${translated}</div>`;
+                    translatedInfo.textContent = `Translated to ${this.getCurrentTargetLanguage()} (${new Date().toLocaleTimeString()})`;
+                    
+                    // Add to history
+                    this.addToHistory(original, translated);
+                }
+                
+                // Show audio visualization when there's activity
+                this.showAudioActivity();
+            }
+
+            addToHistory(original, translated) {
+                this.translationHistory.unshift({
+                    original,
+                    translated,
+                    timestamp: new Date()
+                });
+                
+                // Keep only recent items
+                if (this.translationHistory.length > this.maxHistoryItems) {
+                    this.translationHistory.pop();
+                }
+                
+                this.updateHistoryDisplay();
+            }
+
+            updateHistoryDisplay() {
+                const historySection = document.getElementById('historySection');
+                const historyContainer = document.getElementById('translationHistory');
+                
+                if (this.translationHistory.length > 0) {
+                    historySection.style.display = 'block';
+                    historyContainer.innerHTML = this.translationHistory.map(item => `
+                        <div class="history-item">
+                            <div class="history-original"><strong>Original:</strong> ${item.original}</div>
+                            <div class="history-translated"><strong>Translated:</strong> ${item.translated}</div>
+                            <small class="text-muted">${item.timestamp.toLocaleTimeString()}</small>
+                        </div>
+                    `).join('');
+                } else {
+                    historySection.style.display = 'none';
+                }
+            }
+
+            showAudioActivity() {
+                const audioBars = document.getElementById('audioBars');
+                audioBars.parentElement.classList.add('recording');
+                
+                setTimeout(() => {
+                    audioBars.parentElement.classList.remove('recording');
+                }, 500);
+            }
+
+            async toggleRecording() {
+                if (!this.isRecording) {
+                    await this.startRecording();
+                } else {
+                    this.stopRecording();
+                }
+            }
+
+            async startRecording() {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ type: 'start_session' }));
+                    this.isRecording = true;
+                    this.updateRecordingUI(true);
+                    this.updateStatus('Starting...', 'status-processing');
+                } else {
+                    this.showNotification('Not connected to server. Please wait...', 'error');
+                    this.connectWebSocket();
+                }
+            }
+
+            stopRecording() {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ type: 'stop_session' }));
+                }
+                this.isRecording = false;
+                this.stopRecordingUI();
+            }
+
+            updateRecordingUI(recording) {
+                const startBtn = document.getElementById('startBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const audioBars = document.getElementById('audioBars');
+                
+                if (recording) {
+                    startBtn.style.display = 'none';
+                    stopBtn.style.display = 'block';
+                    audioBars.parentElement.classList.add('recording');
+                } else {
+                    startBtn.style.display = 'block';
+                    stopBtn.style.display = 'none';
+                    audioBars.parentElement.classList.remove('recording');
+                }
+            }
+
+            stopRecordingUI() {
+                this.updateRecordingUI(false);
+            }
+
+            async processAudioFile() {
+                const fileInput = document.getElementById('audioFile');
+                const button = document.getElementById('audioBtn');
+                const progress = document.getElementById('audioProgress');
+                
+                if (!fileInput.files.length) {
+                    this.showNotification('Please select an audio file first.', 'warning');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    button.disabled = true;
+                    progress.style.display = 'block';
+                    this.updateStatus('Processing Audio File...', 'status-processing');
+                    
+                    const response = await fetch('/api/translate_audio', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        this.showNotification('Audio file processed successfully!', 'success');
+                        this.updateStatus('Audio Translation Complete', 'status-connected');
+                    } else {
+                        this.showNotification(result.error || 'Audio processing failed', 'error');
+                        this.updateStatus('Error', 'status-disconnected');
+                    }
+                } catch (error) {
+                    this.showNotification('Error processing audio file: ' + error.message, 'error');
+                    this.updateStatus('Error', 'status-disconnected');
+                } finally {
+                    button.disabled = false;
+                    progress.style.display = 'none';
+                }
+            }
+
+            async processVideoFile() {
+                const fileInput = document.getElementById('videoFile');
+                const button = document.getElementById('videoBtn');
+                const progress = document.getElementById('videoProgress');
+                
+                if (!fileInput.files.length) {
+                    this.showNotification('Please select a video file first.', 'warning');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    button.disabled = true;
+                    progress.style.display = 'block';
+                    this.updateStatus('Processing Video File...', 'status-processing');
+                    
+                    const response = await fetch('/api/translate_video', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        this.showNotification('Video file processed successfully!', 'success');
+                        this.updateStatus('Video Translation Complete', 'status-connected');
+                    } else {
+                        this.showNotification(result.error || 'Video processing failed', 'error');
+                        this.updateStatus('Error', 'status-disconnected');
+                    }
+                } catch (error) {
+                    this.showNotification('Error processing video file: ' + error.message, 'error');
+                    this.updateStatus('Error', 'status-disconnected');
+                } finally {
+                    button.disabled = false;
+                    progress.style.display = 'none';
+                }
+            }
+
+            openLanguageModal() {
+                // Set current values in modal
+                document.getElementById('sourceLang').value = this.getCurrentSourceLanguage();
+                document.getElementById('targetLang').value = this.getCurrentTargetLanguage();
+                
+                const modal = new bootstrap.Modal(document.getElementById('languageModal'));
+                modal.show();
+            }
+
+            async saveLanguages() {
+                const sourceLang = document.getElementById('sourceLang').value;
+                const targetLang = document.getElementById('targetLang').value;
+
+                try {
+                    const response = await fetch('/api/change_languages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `source_lang=${encodeURIComponent(sourceLang)}&target_lang=${encodeURIComponent(targetLang)}`
+                    });
+
+                    if (response.ok) {
+                        this.updateLanguageDisplay(sourceLang, targetLang);
+                        this.showNotification(`Languages changed to ${sourceLang} → ${targetLang}`, 'success');
+                        
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('languageModal'));
+                        modal.hide();
+                    } else {
+                        this.showNotification('Failed to change languages', 'error');
+                    }
+                } catch (error) {
+                    this.showNotification('Error changing languages: ' + error.message, 'error');
+                }
+            }
+
+            updateLanguageDisplay(sourceLang, targetLang) {
+                const currentLanguages = document.getElementById('currentLanguages');
+                currentLanguages.innerHTML = `
+                    <strong>${this.capitalizeFirst(sourceLang)}</strong> 
+                    <i class="fas fa-arrow-right mx-2"></i> 
+                    <strong>${this.capitalizeFirst(targetLang)}</strong>
+                `;
+                
+                // Store in localStorage
+                localStorage.setItem('sourceLang', sourceLang);
+                localStorage.setItem('targetLang', targetLang);
+            }
+
+            loadLanguageSettings() {
+                const sourceLang = localStorage.getItem('sourceLang') || 'english';
+                const targetLang = localStorage.getItem('targetLang') || 'hindi';
+                this.updateLanguageDisplay(sourceLang, targetLang);
+            }
+
+            getCurrentSourceLanguage() {
+                return localStorage.getItem('sourceLang') || 'english';
+            }
+
+            getCurrentTargetLanguage() {
+                return localStorage.getItem('targetLang') || 'hindi';
+            }
+
+            capitalizeFirst(string) {
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            }
+
+            showNotification(message, type = 'info') {
+                // Create toast notification
+                const toastContainer = document.getElementById('toastContainer') || this.createToastContainer();
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0`;
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+                
+                toastContainer.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+                
+                // Remove toast after it's hidden
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toast.remove();
+                });
+            }
+
+            createToastContainer() {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+                return container;
+            }
+
+            setupEventListeners() {
+                // File input change events
+                document.getElementById('audioFile').addEventListener('change', (e) => {
+                    if (e.target.files.length) {
+                        const file = e.target.files[0];
+                        document.getElementById('audioBtn').innerHTML = `<i class="fas fa-translate me-2"></i>Translate ${file.name}`;
+                        document.getElementById('audioFileInfo').textContent = `Size: ${this.formatFileSize(file.size)} | Type: ${file.type}`;
+                    }
+                });
+                
+                document.getElementById('videoFile').addEventListener('change', (e) => {
+                    if (e.target.files.length) {
+                        const file = e.target.files[0];
+                        document.getElementById('videoBtn').innerHTML = `<i class="fas fa-translate me-2"></i>Translate ${file.name}`;
+                        document.getElementById('videoFileInfo').textContent = `Size: ${this.formatFileSize(file.size)} | Type: ${file.type}`;
+                    }
+                });
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.translatorApp = new TranslatorApp();
+        });
+
+        // Global functions for HTML onclick handlers
+        function toggleRecording() {
+            window.translatorApp.toggleRecording();
+        }
+
+        function openLanguageModal() {
+            window.translatorApp.openLanguageModal();
+        }
+
+        function saveLanguages() {
+            window.translatorApp.saveLanguages();
+        }
+
+        function processAudioFile() {
+            window.translatorApp.processAudioFile();
+        }
+
+        function processVideoFile() {
+            window.translatorApp.processVideoFile();
+        }
+    </script>
+</body>
+</html>
