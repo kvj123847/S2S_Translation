@@ -106,13 +106,5 @@ Note: For OTT/system audio capture, enable `Stereo Mix` in Windows Sound Setting
 - `venv/`
 - `.env`
 
----
 
-If you want, I can also:
-
-- run a quick lint/format on the repo
-- create a short `CONTRIBUTING.md` or usage screenshots
-- commit the change and create a branch for review
-
-Tell me which of these (if any) you want next.
 
