@@ -1,48 +1,119 @@
-S2S_Translation
+# Real-Time Speech-to-Speech (S2S) Translation System
 
-This repository contains a speech to speech (S2S) translation project
+This repository contains a real-time multilingual Speech-to-Speech (S2S) translation system developed as an internship project for Infosys Springboard. It supports live microphone translation, system audio (OTT) translation, and audio/video file translation with low latency and a simple web interface.
 
+## Project Overview
 
+The system performs end-to-end speech translation using a five-stage pipeline:
 
+- Audio capture (microphone, system audio, or uploaded file)
+- ASR (Automatic Speech Recognition) — fine-tuned Whisper
+- Machine translation — NLLB-200 (distilled)
+- Text-to-Speech (TTS) — gTTS (Google Text-to-Speech)
+- UI rendering and audio output
 
-Project Contents:-
+Primary focus: Hindi ↔ English, with support for additional Indian languages.
 
-interface.html — simple HTML interface for the translator
+## Repository Structure
 
-translator.html — additional UI layout for translation
+- `interface.html` — Main web interface for live, OTT, and file translation
+- `translator.html` — Alternate/auxiliary interface layout
+- `main2.py` — FastAPI backend, WebSocket handling, session management
+- `model2.py` — ASR, translation, and TTS pipeline implementation
+- `requirements.txt` — Python dependencies
+- `fine_tuned_whisper/` — Fine-tuned Whisper model files
 
-main2.py — main Python script to run the translator
+## Key Components
 
-model2.py — model definitions and helper functions
+- Fine-tuned ASR: A custom Whisper model fine-tuned for Hindi/English.
+	- Model link: https://huggingface.co/kklwq/whisper-small-hi-finetuned
+- Translation: NLLB-200 (600M distilled) for high-quality multilingual translation.
+- TTS: gTTS for speech synthesis (network-dependent).
 
+## Technology Stack
 
+- Backend: FastAPI, Uvicorn, WebSockets
+- Audio/tools: FFmpeg, sounddevice, librosa, pygame
+- Models: Whisper (fine-tuned), NLLB-200, gTTS
+- Frontend: HTML5, CSS3, JavaScript, Bootstrap 5, Font Awesome
 
+## System Architecture (high level)
 
+- `GlobalTranslator` loads and caches models (singleton) to avoid repeated initialization.
+- `AudioProcessor` manages each user session and audio pipelines.
+- Asynchronous WebSockets provide low-latency, real-time communication.
+- TTS runs in background threads to avoid blocking the main event loop.
+- Translation caching and warm-up reduce repeated inference and cold-start latency.
 
-Fine-Tuned Model:-
+## Features
 
-The translation model used in this project is hosted on Hugging Face:
+- Live microphone translation (real-time transcription, translation, playback)
+- OTT / system audio translation (captures system audio via FFmpeg / Stereo Mix)
+- File-based translation: supports `.wav`, `.mp3`, `.mp4`, `.avi`
+- Language selection for source and target languages
+- Low-latency optimizations (warm-up, async design, caching)
 
-Model link: https://huggingface.co/kklwq/whisper-small-hi-finetuned
+## Installation & Setup
 
+Requirements:
 
+- Windows 10/11 recommended (project tested on Windows)
+- Python 3.9+
+- FFmpeg installed and added to `PATH`
+- (Optional) NVIDIA GPU for faster model inference
 
-Quick Start:-
+Quick start (Windows PowerShell):
 
-Ensure Python 3.8 or later is installed.
-
-From the project root, run:
-
+```powershell
+git clone <repo-url>
+cd <repo-folder>
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
 python main2.py
+# Open http://localhost:8000 in your browser
+```
 
-Notes
+Note: For OTT/system audio capture, enable `Stereo Mix` in Windows Sound Settings (Recording tab) if required by your system.
 
-A .gitignore is recommended to avoid committing build artifacts and cache files.
+## Usage
 
-Suggested .gitignore:
+- Live Translation: open the web UI and start live translation to stream from the microphone.
+- OTT Translation: enable system audio capture, play system audio, then start OTT mode in the UI.
+- File Translation: upload an audio/video file in the UI and request translation.
 
-__pycache__/
-*.py[cod]
+## Known Limitations
 
+- Stereo Mix device name may be hard-coded and require manual adjustment.
+- gTTS depends on network calls and may introduce latency.
+- Speaker diarization (multi-speaker separation) is not implemented.
+- Cloud deployment and cross-platform audio capture (Linux/macOS) are not provided out-of-the-box.
 
-You can extend this with virtual environment folders or other project-specific exclusions if needed.
+## Future Enhancements
+
+- Replace gTTS with a local TTS (e.g., FastSpeech2, Bark) for lower latency and offline use
+- Add speaker diarization and multi-speaker support
+- Add real-time subtitle overlays for OTT mode
+- Provide Docker images and CI/CD for cloud deployment
+- Add Linux/macOS audio support (PulseAudio, BlackHole)
+
+## Recommended `.gitignore`
+
+- `__pycache__/`
+- `*.py[cod]`
+- `*.mp3`
+- `*.wav`
+- `*.tmp`
+- `venv/`
+- `.env`
+
+---
+
+If you want, I can also:
+
+- run a quick lint/format on the repo
+- create a short `CONTRIBUTING.md` or usage screenshots
+- commit the change and create a branch for review
+
+Tell me which of these (if any) you want next.
+
