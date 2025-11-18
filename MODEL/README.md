@@ -12,7 +12,6 @@ The system performs end-to-end speech translation using a five-stage pipeline:
 - Text-to-Speech (TTS) — gTTS (Google Text-to-Speech)
 - UI rendering and audio output
 
-Primary focus: Hindi ↔ English, with support for additional Indian languages.
 
 ## Repository Structure
 
@@ -25,7 +24,7 @@ Primary focus: Hindi ↔ English, with support for additional Indian languages.
 
 ## Key Components
 
-- Fine-tuned ASR: A custom Whisper model fine-tuned for Hindi/English.
+- Fine-tuned ASR: A custom Whisper model fine-tuned.
 	- Model link: https://huggingface.co/kklwq/whisper-small-hi-finetuned
 - Translation: NLLB-200 (600M distilled) for high-quality multilingual translation.
 - TTS: gTTS for speech synthesis (network-dependent).
